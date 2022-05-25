@@ -167,6 +167,26 @@ func resourceIBMPrivateDNSSecondaryZoneUpdate(d *schema.ResourceData, meta inter
 }
 
 func resourceIBMPrivateDNSSecondaryZoneDelete(d *schema.ResourceData, meta interface{}) error {
+	sess, err := meta.(conns.ClientSession).PrivateDNSClientSession()
+	if err != nil {
+		return err
+	}
+	idSet := strings.Split(d.Id(), "/")
+	if len(idSet) < 3 {
+		return fmt.Errorf("[ERROR] Incorrect ID %s: Id should be a combination of InstanceID/zoneID/permittedNetworkID", d.Id())
+	}
+	instanceID := idSet[0]
+	resolverID := idSet[1]
+	secondaryZoneID := idSet[2]
+	deleteSecondaryZoneOptions := sess.NewDeleteSecondaryZoneOptions(instanceID, resolverID, secondaryZoneID)
+	response, err := sess.DeleteSecondaryZone(deleteSecondaryZoneOptions)
+
+	if err != nil {
+		return fmt.Errorf("[ERROR] Error reading pdns permitted network:%s\n%s", err, response)
+	}
+
+	d.SetId("")
+
 	return nil
 }
 
