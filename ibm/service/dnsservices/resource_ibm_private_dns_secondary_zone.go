@@ -16,10 +16,10 @@ const (
 	pdnsSecondaryZoneID           = "secondary_zone_id"
 	pdnsSecondaryZoneZone         = "zone"
 	pdnsSecondaryZoneTransferFrom = "transfer_from"
-	pdnsSecondaryZoneCreatedOn    = "created_on"
-	pdnsSecondaryZoneModifiedOn   = "modified_on"
 	pdnsSecondaryZoneEnabled      = "enabled"
 	pdnsSecondaryZoneDescription  = "description"
+	pdnsSecondaryZoneCreatedOn    = "created_on"
+	pdnsSecondaryZoneModifiedOn   = "modified_on"
 )
 
 func ResourceIBMPrivateDNSSecondaryZone() *schema.Resource {
@@ -41,6 +41,30 @@ func ResourceIBMPrivateDNSSecondaryZone() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Secondary Zone ID",
+			},
+
+			pdnsSecondaryZoneZone: {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Secondary Zone Zone",
+			},
+
+			pdnsSecondaryZoneTransferFrom: {
+				Type:        schema.TypeList,
+				Computed:    true,
+				Description: "Secondary Zone Zone",
+			},
+
+			pdnsSecondaryZoneEnabled: {
+				Type:        schema.TypeBool,
+				Computed:    true,
+				Description: "Secondary Zone Enabled",
+			},
+
+			pdnsSecondaryZoneDescription: {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Secondary Zone Description",
 			},
 
 			pdnsSecondaryZoneCreatedOn: {
