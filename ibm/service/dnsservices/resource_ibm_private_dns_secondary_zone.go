@@ -65,7 +65,6 @@ func resourceIBMPrivateDNSSecondaryZoneCreate(d *schema.ResourceData, meta inter
 	}
 
 	instanceID := d.Get(pdnsInstanceID).(string)
-	zoneID := d.Get(pdnsZoneID).(string)
 	resolverID := d.Get(pdnsResolverID).(string)
 	zone := d.Get(pdnsSecondaryZoneZone).(string)
 	transferFrom := d.Get(pdnsSecondaryZoneTransferFrom).(string)
@@ -77,16 +76,16 @@ func resourceIBMPrivateDNSSecondaryZoneCreate(d *schema.ResourceData, meta inter
 		[]string{transferFrom},
 	)
 
-	mk := "private_dns_secondary_zone_" + instanceID + zoneID
+	mk := "private_dns_secondary_zone_" + instanceID + resolverID
 	conns.IbmMutexKV.Lock(mk)
 	defer conns.IbmMutexKV.Unlock(mk)
 
-	response, detail, err := sess.CreateSecondaryZone(createSecondaryZoneOptions)
+	resource, response, err := sess.CreateSecondaryZone(createSecondaryZoneOptions)
 	if err != nil {
-		return fmt.Errorf("[ERROR] Error creating pdns secondary zone:%s\n%s", err, detail)
+		return fmt.Errorf("[ERROR] Error creating pdns secondary zone:%s\n%s", err, response)
 	}
 
-	d.SetId(fmt.Sprintf("%s/%s/%s", instanceID, zoneID, *response.ID))
+	d.SetId(fmt.Sprintf("%s/%s/%s", instanceID, resolverID, *resource.ID))
 	return resourceIBMPrivateDNSSecondaryZoneRead(d, meta)
 }
 
@@ -97,24 +96,24 @@ func resourceIBMPrivateDNSSecondaryZoneRead(d *schema.ResourceData, meta interfa
 	}
 	idSet := strings.Split(d.Id(), "/")
 	if len(idSet) < 3 {
-		return fmt.Errorf("[ERROR] Incorrect ID %s: Id should be a combination of InstanceID/zoneID/permittedNetworkID", d.Id())
+		return fmt.Errorf("[ERROR] Incorrect ID %s: Id should be a combination of InstanceID/resolverID/secondaryZoneID", d.Id())
 	}
 	instanceID := idSet[0]
 	resolverID := idSet[1]
 	secondaryZoneID := idSet[2]
 	getSecondaryZoneOptions := sess.NewGetSecondaryZoneOptions(instanceID, resolverID, secondaryZoneID)
-	response, detail, err := sess.GetSecondaryZone(getSecondaryZoneOptions)
+	resource, response, err := sess.GetSecondaryZone(getSecondaryZoneOptions)
 
 	if err != nil {
-		return fmt.Errorf("[ERROR] Error reading pdns permitted network:%s\n%s", err, detail)
+		return fmt.Errorf("[ERROR] Error reading pdns secondary zone:%s\n%s", err, response)
 	}
 
 	d.Set(pdnsInstanceID, idSet[0])
 	d.Set(pdnsZoneID, idSet[1])
-	d.Set(pdnsSecondaryZoneID, response.ID)
-	d.Set(pdnsSecondaryZoneCreatedOn, response.CreatedOn)
-	d.Set(pdnsSecondaryZoneModifiedOn, response.ModifiedOn)
-	d.Set(pdnsSecondaryZoneEnabled, response.Enabled)
+	d.Set(pdnsSecondaryZoneID, resource.ID)
+	d.Set(pdnsSecondaryZoneCreatedOn, resource.CreatedOn)
+	d.Set(pdnsSecondaryZoneModifiedOn, resource.ModifiedOn)
+	d.Set(pdnsSecondaryZoneEnabled, resource.Enabled)
 
 	return nil
 }
@@ -127,7 +126,7 @@ func resourceIBMPrivateDNSSecondaryZoneUpdate(d *schema.ResourceData, meta inter
 
 	idSet := strings.Split(d.Id(), "/")
 	if len(idSet) < 3 {
-		return fmt.Errorf("[ERROR] Incorrect ID %s: Id should be a combination of InstanceID/zoneID/permittedNetworkID", d.Id())
+		return fmt.Errorf("[ERROR] Incorrect ID %s: Id should be a combination of InstanceID/resolverID/secondaryZoneID", d.Id())
 	}
 	instanceID := idSet[0]
 	resolverID := idSet[1]
@@ -156,10 +155,14 @@ func resourceIBMPrivateDNSSecondaryZoneUpdate(d *schema.ResourceData, meta inter
 		updateSecondaryZoneOptions.SetDescription(description)
 		updateSecondaryZoneOptions.SetEnabled(enabled)
 
-		_, detail, err := sess.UpdateSecondaryZone(updateSecondaryZoneOptions)
+		mk := "private_dns_secondary_zone_" + instanceID + resolverID
+		conns.IbmMutexKV.Lock(mk)
+		defer conns.IbmMutexKV.Unlock(mk)
+
+		_, response, err := sess.UpdateSecondaryZone(updateSecondaryZoneOptions)
 
 		if err != nil {
-			return fmt.Errorf("[ERROR] Error updating pdns zone:%s\n%s", err, detail)
+			return fmt.Errorf("[ERROR] Error updating pdns zone:%s\n%s", err, response)
 		}
 	}
 
@@ -173,16 +176,20 @@ func resourceIBMPrivateDNSSecondaryZoneDelete(d *schema.ResourceData, meta inter
 	}
 	idSet := strings.Split(d.Id(), "/")
 	if len(idSet) < 3 {
-		return fmt.Errorf("[ERROR] Incorrect ID %s: Id should be a combination of InstanceID/zoneID/permittedNetworkID", d.Id())
+		return fmt.Errorf("[ERROR] Incorrect ID %s: Id should be a combination of InstanceID/resolverID/secondaryZoneID", d.Id())
 	}
 	instanceID := idSet[0]
 	resolverID := idSet[1]
 	secondaryZoneID := idSet[2]
 	deleteSecondaryZoneOptions := sess.NewDeleteSecondaryZoneOptions(instanceID, resolverID, secondaryZoneID)
+
+	mk := "private_dns_secondary_zone_" + instanceID + resolverID
+	conns.IbmMutexKV.Lock(mk)
+	defer conns.IbmMutexKV.Unlock(mk)
 	response, err := sess.DeleteSecondaryZone(deleteSecondaryZoneOptions)
 
 	if err != nil {
-		return fmt.Errorf("[ERROR] Error reading pdns permitted network:%s\n%s", err, response)
+		return fmt.Errorf("[ERROR] Error reading pdns secondary zone:%s\n%s", err, response)
 	}
 
 	d.SetId("")
@@ -191,5 +198,26 @@ func resourceIBMPrivateDNSSecondaryZoneDelete(d *schema.ResourceData, meta inter
 }
 
 func resourceIBMPrivateDNSSecondaryZoneExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+	sess, err := meta.(conns.ClientSession).PrivateDNSClientSession()
+	if err != nil {
+		return false, err
+	}
+	idSet := strings.Split(d.Id(), "/")
+	if len(idSet) < 3 {
+		return false, fmt.Errorf("[ERROR] Incorrect ID %s: Id should be a combination of InstanceID/resolverID/secondaryZoneID", d.Id())
+	}
+	instanceID := idSet[0]
+	resolverID := idSet[1]
+	secondaryZoneID := idSet[2]
+	getSecondaryZoneOptions := sess.NewGetSecondaryZoneOptions(instanceID, resolverID, secondaryZoneID)
+	_, response, err := sess.GetSecondaryZone(getSecondaryZoneOptions)
+
+	if err != nil {
+		if response != nil && response.StatusCode == 404 {
+			return false, nil
+		}
+		return false, err
+	}
+
 	return false, nil
 }
