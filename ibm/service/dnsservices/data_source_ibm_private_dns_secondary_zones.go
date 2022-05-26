@@ -1,37 +1,132 @@
+// Copyright IBM Corp. 2022 All Rights Reserved.
+// Licensed under the Mozilla Public License v2.0
+
 package dnsservices
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/IBM-Cloud/terraform-provider-ibm/ibm/conns"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
+const (
+	pdnsSecondaryZones = "secondary_zones"
+	pdnsSZResolverID   = "resolver_id"
+	pdnsSZId           = "secondary_zone_id"
+	pdnsSZDescription  = "description"
+	pdnsSZZone         = "zone"
+	pdnsSZEnabled      = "enabled"
+	pdnsSZTransferFrom = "transfer_from"
+	pdnsSZCreatedOn    = "created_on"
+	pdnsSZModifiedOn   = "modified_on"
+	pdnsSZOffset       = "offset"
+	pdnsSZLimit        = "limit"
+)
+
 func DataSourceIBMPrivateDNSSecondaryZones() *schema.Resource {
-	return &schema.Resource{}
+	return &schema.Resource{
+		ReadContext: dataSourceIBMDNSSecondaryZonesRead,
+
+		Schema: map[string]*schema.Schema{
+			pdnsInstanceID: {
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Instance ID",
+			},
+			pdnsSZResolverID: {
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The unique identifier of a custom resolver.",
+			},
+			pdnsSecondaryZones: {
+				Type:        schema.TypeList,
+				Description: "Secondary Zone details",
+				Computed:    true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						pdnsSZId: {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "Identifier of the Secondary Zone",
+						},
+						pdnsSZDescription: {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						pdnsSZZone: {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Zone name",
+						},
+						pdnsSZEnabled: {
+							Type:     schema.TypeBool,
+							Optional: true,
+						},
+						pdnsSZTransferFrom: {
+							Type:        schema.TypeList,
+							Required:    true,
+							Description: "The source configuration of secondary zone output",
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						pdnsSZCreatedOn: {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "Time when a secondary zone is created",
+						},
+
+						pdnsSZModifiedOn: {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "The recent time when a secondary zone is modified",
+						},
+					},
+				},
+			},
+		},
+	}
 }
 
-func dataSourceIBMPrivateDNSSecondaryZonesRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceIBMDNSSecondaryZonesRead(context context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	sess, err := meta.(conns.ClientSession).PrivateDNSClientSession()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	instanceID := d.Get(pdnsInstanceID).(string)
-	DnszoneID := d.Get(pdnsZoneID).(string)
-	listDNSSecondaryZoneOptions := sess.NewListSecondaryZonesOptions(instanceID, DnszoneID)
-	// availableSecondaryZones, detail, err := sess.ListSecondaryZones(listDNSSecondaryZoneOptions)
-	_, detail, err := sess.ListSecondaryZones(listDNSSecondaryZoneOptions)
-	if err != nil {
-		return fmt.Errorf("[ERROR] Error reading list of pdns resource records:%s\n%s", err, detail)
+	resolverID := d.Get(pdnsSZResolverID).(string)
+
+	opt := sess.NewListSecondaryZonesOptions(instanceID, resolverID)
+
+	result, resp, err := sess.ListSecondaryZonesWithContext(context, opt)
+	if err != nil || result == nil {
+		return diag.FromErr(fmt.Errorf("[ERROR] Error listing the Secondary Zones %s:%s", err, resp))
 	}
-	// secondaryZones := make([]map[string]interface{}, 0)
-	// for _, instance := range secondaryZones.SecondaryZones {
-	// }
+
+	secondaryZones := make([]interface{}, 0)
+	for _, instance := range result.SecondaryZones {
+		secondaryZone := map[string]interface{}{}
+		secondaryZone[pdnsSZId] = *instance.ID
+		secondaryZone[pdnsSZDescription] = *instance.Description
+		secondaryZone[pdnsSZZone] = *instance.Zone
+		secondaryZone[pdnsSZEnabled] = *instance.Enabled
+		secondaryZone[pdnsSZTransferFrom] = instance.TransferFrom
+		secondaryZone[pdnsSZCreatedOn] = *instance.CreatedOn
+		secondaryZone[pdnsSZModifiedOn] = *instance.ModifiedOn
+
+		secondaryZones = append(secondaryZones, secondaryZone)
+	}
+	d.SetId(dataSourceIBMPrivateDNSSecondaryZoneID(d))
+	d.Set(pdnsInstanceID, instanceID)
+	d.Set(pdnsSZResolverID, resolverID)
+	d.Set(pdnsSecondaryZones, secondaryZones)
 	return nil
 }
 
-// dataSourceIBMPrivateDNSSecondaryZonesID returns a reasonable ID for dns zones list.
-func dataSourceIBMPrivateDNSSecondaryZonesID(d *schema.ResourceData) string {
+func dataSourceIBMPrivateDNSSecondaryZoneID(d *schema.ResourceData) string {
 	return time.Now().UTC().String()
 }
