@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/IBM-Cloud/terraform-provider-ibm/ibm/conns"
+	"github.com/IBM-Cloud/terraform-provider-ibm/ibm/flex"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -37,6 +38,16 @@ func ResourceIBMPrivateDNSSecondaryZone() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
+			pdnsInstanceID: {
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The unique identifier of a service instance.",
+			},
+			pdnsResolverID: {
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The unique identifier of a custom resolver.",
+			},
 			pdnsSecondaryZoneID: {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -45,25 +56,26 @@ func ResourceIBMPrivateDNSSecondaryZone() *schema.Resource {
 
 			pdnsSecondaryZoneZone: {
 				Type:        schema.TypeString,
-				Computed:    true,
+				Required:    true,
 				Description: "Secondary Zone Zone",
 			},
 
 			pdnsSecondaryZoneTransferFrom: {
 				Type:        schema.TypeList,
-				Computed:    true,
+				Required:    true,
 				Description: "Secondary Zone Zone",
+				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 
 			pdnsSecondaryZoneEnabled: {
 				Type:        schema.TypeBool,
-				Computed:    true,
+				Required:    true,
 				Description: "Secondary Zone Enabled",
 			},
 
 			pdnsSecondaryZoneDescription: {
 				Type:        schema.TypeString,
-				Computed:    true,
+				Optional:    true,
 				Description: "Secondary Zone Description",
 			},
 
@@ -91,14 +103,12 @@ func resourceIBMPrivateDNSSecondaryZoneCreate(d *schema.ResourceData, meta inter
 	instanceID := d.Get(pdnsInstanceID).(string)
 	resolverID := d.Get(pdnsResolverID).(string)
 	zone := d.Get(pdnsSecondaryZoneZone).(string)
-	transferFrom := d.Get(pdnsSecondaryZoneTransferFrom).(string)
+	transferFrom := flex.ExpandStringList(d.Get(pdnsSecondaryZoneTransferFrom).([]interface{}))
 
 	createSecondaryZoneOptions := sess.NewCreateSecondaryZoneOptions(instanceID, resolverID)
 
 	createSecondaryZoneOptions.SetZone(zone)
-	createSecondaryZoneOptions.SetTransferFrom(
-		[]string{transferFrom},
-	)
+	createSecondaryZoneOptions.SetTransferFrom(transferFrom)
 
 	mk := "private_dns_secondary_zone_" + instanceID + resolverID
 	conns.IbmMutexKV.Lock(mk)
