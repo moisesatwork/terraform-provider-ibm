@@ -103,11 +103,13 @@ func resourceIBMPrivateDNSSecondaryZoneCreate(d *schema.ResourceData, meta inter
 	instanceID := d.Get(pdnsInstanceID).(string)
 	resolverID := d.Get(pdnsResolverID).(string)
 	zone := d.Get(pdnsSecondaryZoneZone).(string)
+	enabled := d.Get(pdnsSecondaryZoneEnabled).(bool)
 	transferFrom := flex.ExpandStringList(d.Get(pdnsSecondaryZoneTransferFrom).([]interface{}))
 
 	createSecondaryZoneOptions := sess.NewCreateSecondaryZoneOptions(instanceID, resolverID)
 
 	createSecondaryZoneOptions.SetZone(zone)
+	createSecondaryZoneOptions.SetEnabled(enabled)
 	createSecondaryZoneOptions.SetTransferFrom(transferFrom)
 
 	mk := "private_dns_secondary_zone_" + instanceID + resolverID
@@ -178,14 +180,10 @@ func resourceIBMPrivateDNSSecondaryZoneUpdate(d *schema.ResourceData, meta inter
 		d.HasChange(pdnsSecondaryZoneDescription) ||
 		d.HasChange(pdnsSecondaryZoneEnabled) {
 		updateSecondaryZoneOptions := sess.NewUpdateSecondaryZoneOptions(instanceID, resolverID, secondaryZoneID)
-		transferFrom := d.Get(pdnsSecondaryZoneTransferFrom).(string)
+		transferFrom := flex.ExpandStringList(d.Get(pdnsSecondaryZoneTransferFrom).([]interface{}))
 		description := d.Get(pdnsSecondaryZoneDescription).(string)
 		enabled := d.Get(pdnsSecondaryZoneEnabled).(bool)
-		updateSecondaryZoneOptions.SetTransferFrom(
-			[]string{
-				transferFrom,
-			},
-		)
+		updateSecondaryZoneOptions.SetTransferFrom(transferFrom)
 		updateSecondaryZoneOptions.SetDescription(description)
 		updateSecondaryZoneOptions.SetEnabled(enabled)
 
@@ -253,5 +251,5 @@ func resourceIBMPrivateDNSSecondaryZoneExists(d *schema.ResourceData, meta inter
 		return false, err
 	}
 
-	return false, nil
+	return true, nil
 }
