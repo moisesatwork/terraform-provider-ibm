@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
-func TestAccIBMPrivateDNSSecondaryZone_Basic(t *testing.T) {
+func TestAccIBMPrivateDNSSecondaryZone_basic(t *testing.T) {
 	vpcname := fmt.Sprintf("cr-vpc-%d", acctest.RandIntRange(10, 100))
 	subnetname := fmt.Sprintf("cr-subnet-name-%d", acctest.RandIntRange(10, 100))
 	name := fmt.Sprintf("testpdnscustomresolver%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
@@ -27,11 +27,10 @@ func TestAccIBMPrivateDNSSecondaryZone_Basic(t *testing.T) {
 		CheckDestroy: testAccCheckIBMPrivateDNSSecondaryZoneDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckIBMPrivateDNSSecondaryZoneConfig_basic(vpcname, subnetname, acc.ISZoneName, acc.ISCIDR, name, description),
+				Config: testAccCheckIBMPrivateDNSSecondaryZoneResource(vpcname, subnetname, acc.ISZoneName, acc.ISCIDR, name, description),
 			},
 		},
 	})
-
 }
 
 func testAccCheckIBMPrivateDNSSecondaryZoneDestroy(s *terraform.State) error {
@@ -68,7 +67,7 @@ func testAccCheckIBMPrivateDNSSecondaryZoneDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccCheckIBMPrivateDNSSecondaryZoneConfig_basic(vpcname, subnetname, zone, cidr, name, description string) string {
+func testAccCheckIBMPrivateDNSSecondaryZoneResource(vpcname, subnetname, zone, cidr, name, description string) string {
 	return fmt.Sprintf(`
 	data "ibm_resource_group" "rg" {
 		is_default	= true

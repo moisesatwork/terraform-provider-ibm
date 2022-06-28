@@ -25,12 +25,12 @@ const (
 
 func ResourceIBMPrivateDNSSecondaryZone() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceIBMPrivateDNSSecondaryZoneCreate,
-		Read:   resourceIBMPrivateDNSSecondaryZoneRead,
-		Update: resourceIBMPrivateDNSSecondaryZoneUpdate,
-		Delete: resourceIBMPrivateDNSSecondaryZoneDelete,
-		Exists: resourceIBMPrivateDNSSecondaryZoneExists,
-
+		Create:   resourceIBMPrivateDNSSecondaryZoneCreate,
+		Read:     resourceIBMPrivateDNSSecondaryZoneRead,
+		Update:   resourceIBMPrivateDNSSecondaryZoneUpdate,
+		Delete:   resourceIBMPrivateDNSSecondaryZoneDelete,
+		Exists:   resourceIBMPrivateDNSSecondaryZoneExists,
+		Importer: &schema.ResourceImporter{},
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
 			Update: schema.DefaultTimeout(10 * time.Minute),
@@ -102,6 +102,7 @@ func resourceIBMPrivateDNSSecondaryZoneCreate(d *schema.ResourceData, meta inter
 
 	instanceID := d.Get(pdnsInstanceID).(string)
 	resolverID := d.Get(pdnsResolverID).(string)
+	description := d.Get(pdnsSecondaryZoneDescription).(string)
 	zone := d.Get(pdnsSecondaryZoneZone).(string)
 	enabled := d.Get(pdnsSecondaryZoneEnabled).(bool)
 	transferFrom := flex.ExpandStringList(d.Get(pdnsSecondaryZoneTransferFrom).([]interface{}))
@@ -109,6 +110,7 @@ func resourceIBMPrivateDNSSecondaryZoneCreate(d *schema.ResourceData, meta inter
 	createSecondaryZoneOptions := sess.NewCreateSecondaryZoneOptions(instanceID, resolverID)
 
 	createSecondaryZoneOptions.SetZone(zone)
+	createSecondaryZoneOptions.SetDescription(description)
 	createSecondaryZoneOptions.SetEnabled(enabled)
 	createSecondaryZoneOptions.SetTransferFrom(transferFrom)
 
@@ -144,12 +146,20 @@ func resourceIBMPrivateDNSSecondaryZoneRead(d *schema.ResourceData, meta interfa
 		return fmt.Errorf("[ERROR] Error reading pdns secondary zone:%s\n%s", err, response)
 	}
 
+	transferFrom := []string{}
+	for _, value := range resource.TransferFrom {
+		values := strings.Split(value, ":")
+		transferFrom = append(transferFrom, values[0])
+	}
 	d.Set(pdnsInstanceID, idSet[0])
-	d.Set(pdnsZoneID, idSet[1])
-	d.Set(pdnsSecondaryZoneID, resource.ID)
+	d.Set(pdnsResolverID, idSet[1])
+	d.Set(pdnsSecondaryZoneDescription, *resource.Description)
+	d.Set(pdnsSecondaryZoneZone, *resource.Zone)
+	d.Set(pdnsSecondaryZoneTransferFrom, transferFrom)
+	d.Set(pdnsSecondaryZoneID, *resource.ID)
 	d.Set(pdnsSecondaryZoneCreatedOn, resource.CreatedOn)
 	d.Set(pdnsSecondaryZoneModifiedOn, resource.ModifiedOn)
-	d.Set(pdnsSecondaryZoneEnabled, resource.Enabled)
+	d.Set(pdnsSecondaryZoneEnabled, *resource.Enabled)
 
 	return nil
 }
