@@ -553,7 +553,7 @@ func Provider() *schema.Provider {
 			"ibm_dns_glbs":                             dnsservices.DataSourceIBMPrivateDNSGLBs(),
 			"ibm_dns_custom_resolvers":                 dnsservices.DataSourceIBMPrivateDNSCustomResolver(),
 			"ibm_dns_custom_resolver_forwarding_rules": dnsservices.DataSourceIBMPrivateDNSForwardingRules(),
-			"ibm_dns_secondary_zones":                  dnsservices.DataSourceIBMPrivateDNSSecondaryZones(),
+			"ibm_dns_custom_resolver_secondary_zones":  dnsservices.DataSourceIBMPrivateDNSSecondaryZones(),
 
 			// // Added for Direct Link
 
@@ -973,7 +973,7 @@ func Provider() *schema.Provider {
 			"ibm_dns_custom_resolver":                 dnsservices.ResourceIBMPrivateDNSCustomResolver(),
 			"ibm_dns_custom_resolver_location":        dnsservices.ResourceIBMPrivateDNSCRLocation(),
 			"ibm_dns_custom_resolver_forwarding_rule": dnsservices.ResourceIBMPrivateDNSForwardingRule(),
-			"ibm_dns_secondary_zone":                  dnsservices.ResourceIBMPrivateDNSSecondaryZone(),
+			"ibm_dns_custom_resolver_secondary_zone":  dnsservices.ResourceIBMPrivateDNSSecondaryZone(),
 
 			// //Direct Link related resources
 			"ibm_dl_gateway":            directlink.ResourceIBMDLGateway(),
